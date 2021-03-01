@@ -6,8 +6,9 @@ This file creates your application.
 """
 import os
 from app import app
-from flask import render_template, request, redirect, url_for, flash, session, abort
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
 from .forms import UploadForm
+from .config import Config
 from werkzeug.utils import secure_filename
 
 
@@ -47,6 +48,14 @@ def upload():
 
     return render_template('upload.html', form=form)
 
+@app.route('/uploads/<filename>')
+def get_image(filename):
+    root_dir = os.getcwd()
+    return send_from_directory(os.path.join(root_dir,app.config['UPLOAD_FOLDER']),filename)
+
+
+
+
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -69,6 +78,25 @@ def logout():
     return redirect(url_for('home'))
 
 
+@app.route('/files')
+def files():
+    if not session.get('logged_in'):
+        abort(401)
+    image_list = get_uploaded_images()
+    return render_template('files.html',image_list=image_list)
+
+def get_uploaded_images():
+    rootdir = os.getcwd()
+    print(rootdir)
+    fileslst = []
+    for subdir, dirs, files in os.walk(rootdir + '/uploads'):
+        for image in files:
+            #fileslst.append(image)
+            if image!=".gitkeep":
+                fileslst.append(image)
+    return fileslst
+    #print(files)
+
 ###
 # The functions below should be applicable to all Flask apps.
 ###
@@ -81,6 +109,8 @@ def flash_errors(form):
                 getattr(form, field).label.text,
                 error
 ), 'danger')
+
+
 
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):
